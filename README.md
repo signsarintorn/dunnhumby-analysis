@@ -157,14 +157,6 @@ Working notes: [docs/journey.md](docs/journey.md)
 - The panel of 2,500 households may not represent all store customers.
 - Holiday timing is inferred from product patterns, not calendar dates.
 
-## How to run
-
-1. Install PostgreSQL 18 and Python 3.14 with `pip install pandas sqlalchemy "psycopg[binary]"`
-2. Create an empty database named `dunnhumby` in pgAdmin
-3. Download the dataset from Kaggle and place the CSV files in `data/archive (1)/`
-4. From the `sql` folder, run `python 00_load_data.py` (asks for the postgres password)
-5. Run `01` to `06` in order in pgAdmin
-6. Open `dashboard/dunnhumby.pbix` in Power BI Desktop and refresh
 
 ## Repository structure
 
