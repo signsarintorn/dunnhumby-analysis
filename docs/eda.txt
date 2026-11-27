@@ -1,0 +1,70 @@
+# Exploratory data analysis
+
+Scope: merchandise only, from `sql/02_eda.sql`. Numbers in sections 1 and 2 include all sales
+(merchandise and non-merchandise), as they were run before the non-merchandise flag was built.
+
+## 1. Weekly trend
+
+1. Weeks 1 to 16 show households still joining the panel, so sales climb from near zero.
+   They are excluded from all analysis.
+2. Week 102 covers only 6 days (days 706 to 711). Its sales per day (11,995) match earlier weeks,
+   so the lower total reflects the missing day. It is kept for customer-level analysis and
+   excluded from week-to-week comparisons.
+3. From week 17 onward, weekly sales vary little: half of all weeks fall between 83,011 and 90,463
+   (cv 7.7%), and the number of shopping households varies even less (cv 3.0%).
+
+## 2. Sales drivers and 17-week blocks
+
+Weekly sales = shopping households x trips per household x spend per basket.
+
+| Weeks | Avg weekly sales | Households | Trips per household | Spend per basket |
+|---|---|---|---|---|
+| 17 to 33 | 81,016 | 1,304 | 2.27 | 27.37 |
+| 34 to 50 | 86,186 | 1,301 | 2.23 | 29.65 |
+| 51 to 67 | 87,675 | 1,331 | 2.26 | 29.20 |
+| 68 to 84 | 87,091 | 1,339 | 2.24 | 29.01 |
+| 85 to 101 | 92,453 | 1,341 | 2.17 | 31.71 |
+
+1. In most of the top and bottom 10 weeks, spend per basket moved more than households or trips.
+2. Sales rise in weeks 85 to 101 with bigger baskets and slightly fewer trips. This first looked
+   like growth. Q3 showed it is the holiday season, and weeks 34 to 50 hold the first-year
+   holiday season. Regular weeks 50 to 84 are therefore used as the baseline.
+
+## 3. Product and department mix
+
+1. 7 of 42 departments hold about 93% of sales. GROCERY alone holds about 51%.
+2. Non-merchandise (fuel, coupons, misc transactions, postage, donations) is about 8 to 10% of
+   sales but only about 1.2% of line items. Fuel is worth about 10 times more per line item than
+   groceries (24.92 vs 2.49).
+3. 668 products are flagged as non-merchandise in the view `product_clean`.
+4. Non-merchandise does not explain the late rise in spend per basket. Its share of sales fell
+   (9.8% to 8.0%) while spend per basket for merchandise rose 10.6% (29.05 to 32.13).
+
+## 4. Shopping frequency
+
+Baskets with merchandise per household, weeks 17 to 102:
+
+| p10 | p25 | Median | p75 | p90 |
+|---|---|---|---|---|
+| 15 | 32 | 67 | 120 | 193 |
+
+1. The median household shops about every 9 days. The lightest 10% shop about every 40 days and
+   the heaviest 10% about every 3 days.
+2. About 9.2% of baskets contain only non-merchandise (for example a fuel-only stop). These are
+   not counted as shopping trips.
+3. Frequency is very uneven, so RFM scores use quintiles, and churn risk is judged against each
+   household's own rhythm.
+
+## 5. Campaigns and coupons
+
+1. 30 campaigns of three types. TypeA (5 campaigns) reach 13 to 45% of households each and
+   1,513 households in total. TypeB (19) and TypeC (6) are small, often under 20 households.
+2. No campaign runs in weeks 17 to 32. From week 33, campaigns overlap continuously, so campaign
+   weeks cannot be compared with non-campaign weeks.
+3. 434 households (17.4%) ever redeemed a coupon, 5.3 times each on average. Redemption rates
+   among targeted households: TypeA 25.3%, TypeB 13.8%, TypeC 9.6%.
+4. Every redemption comes from a household listed as targeted, so `campaign_table` is a complete
+   list of targeted households.
+5. Targeting is not random. In weeks 17 to 32, households that later received TypeA had a median
+   spend of 516 vs 88 for the rest and made 18 vs 4 trips. Only 1.3% made no purchase,
+   vs 13.1% of the others.

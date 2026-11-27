@@ -1,0 +1,26 @@
+# Dunnhumby Retail Analysis: Business Case
+
+Written before the analysis. The final framing is in the README.
+
+## 1. Context
+I take the role of a Business Insight Analyst at a US supermarket chain. The CEO wants to know
+which households to retain, whether promotions are paying off, and which products to bundle.
+The analysis uses the Dunnhumby "The Complete Journey" dataset from Kaggle (about 2,500 households
+over 2 years).
+
+## 2. Business questions
+1. Segment value: which household groups generate the most revenue, and which are likely to lapse?
+2. Promotion effectiveness: do promotions increase sales?
+3. Cross-sell: which products are often bought together, and which should be bundled?
+
+## 3. Deliverables
+1. SQL analysis
+2. Power BI dashboard (4 pages: Overview, Customers, Campaigns, Baskets)
+3. Findings and recommendations (in the README)
+
+## 4. How the case evolved
+1. A business trigger was added after the weekly trend analysis: sales are flat outside the
+   holiday season, so the questions became how to grow a flat base.
+2. Question 2 narrowed to targeted coupon campaigns, since store discounts have no comparison
+   group. The answer turned out to be that campaign impact cannot be measured with this data.
+3. Question 3 added a seasonal angle after holiday products were found to drive bigger baskets.

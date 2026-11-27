@@ -1,0 +1,108 @@
+# Project journey
+
+A working log of how the analysis developed: what was done, what went wrong, and what changed.
+Findings are in the README, details in [eda.md](eda.md) and [methods.md](methods.md).
+
+## Stage 0. Setup and data import
+
+1. Set up folders and drafted the business case before touching the data.
+2. The project sat in a OneDrive-synced folder with full storage, so files were cloud-only and
+   failed to load. Moved the project off synced folders.
+3. Python 3.14 had no ready build of psycopg2, so the loader switched to psycopg 3 and loads with
+   PostgreSQL COPY in chunks of 200,000 rows.
+4. Briefly considered switching datasets because demographics are anonymised. Kept Dunnhumby,
+   since its campaign data supports the promotion question, then dropped and recreated the
+   database for a clean load.
+5. Row counts matched the source for all 7 tables (2,595,732 transaction rows).
+   `causal_data` was skipped (very large, not needed).
+
+## Stage 1. Data quality
+
+1. Found 18,917 rows (0.73%) with zero sales or zero quantity. No negative values, so returns
+   are not in the data.
+2. First hypotheses were wrong: zero-sales rows were not returns or coupons (coupon discount was 0).
+   Store discounts explained 3,748 of them, so these were kept for basket analysis only.
+3. Built two views: `transactions_clean` for revenue and customers, `transactions_basket` for
+   basket analysis. Excluding rows changed total sales by 19.28, traced to zero-quantity rows.
+4. Only 801 of 2,500 households have demographics, and they spend about 3 times more (checked with
+   both mean and median). Decided not to use demographics.
+5. Hit a ROUND error on double precision values. Fixed with `::numeric`.
+6. No duplicate rows found.
+
+Lesson: verify expected results before writing them down.
+
+## Stage 2. EDA
+
+1. Weeks 1 to 16 are a panel ramp-up and were excluded. Week 102 has only 6 days, confirmed by
+   checking days covered and sales per day.
+2. Weekly stats looked volatile at first (cv 26.5%), but the middle half of weeks varied only 12%.
+   The volatility came from the ramp-up weeks.
+3. Top and bottom 10 weeks suggested basket value drives sales. Comparing 17-week blocks then
+   showed a rise in the last block, which first looked like growth.
+4. Flagged fuel and other non-merchandise (about 9% of sales, 668 products). Checked that fuel did
+   not explain the late rise in basket value. It did not.
+5. Shopping frequency differs about 13 times between light and heavy households, which shaped the
+   RFM design.
+6. Campaign tables showed overlapping campaigns from week 33, very low coupon redemption (17%),
+   and non-random targeting: households later targeted already spent 5.9 times more.
+7. Decided to keep EDA descriptive and record hypotheses (H1 to H8) to test later, instead of
+   chasing each new result.
+
+## Stage 3. Q1 Customer segmentation
+
+1. Scored households 1 to 5 by quintile cut-offs rather than NTILE, so ties get the same score.
+2. Combined Frequency and Monetary into one score after checking they move together
+   (91% within one point).
+3. RFM "At risk" looked too broad: its median household had been away only 19 days but usually
+   shops every 8 to 9 days. Added a rhythm check that compares each household with its own usual gap.
+4. A third of "At risk" households turned out to be within their normal rhythm.
+5. Tested average vs median gap. Results differed by 17% in households but only about 10% in
+   revenue, so both are reported as a range (317 to 372 households).
+6. Corrected an addition error in the summary (314 to 317).
+
+## Stage 4. Q2 Campaigns
+
+1. Sales drivers: spend per basket explains 77% of weekly variation (H1 supported).
+2. First lift estimate for campaign 18 used a baseline a year earlier and gave about 145,000.
+   Decile 1 showed a lift of 31.4 per week, which looked suspicious.
+3. A recent baseline (8 weeks before) cut the estimate to about 60,000. The decile 1 lift vanished,
+   so those households had reactivated before the campaign.
+4. Pull-forward check: no drop after the campaign. Found that targeted households also received
+   later campaigns 7 times more often, so the check was repeated without them. Still no drop.
+5. Placebo test in weeks with no campaigns: targeted households grew 11.7 per week faster anyway,
+   more than the measured lift. Concluded the campaign effect cannot be confirmed with this data.
+6. Discounts: coupons are only about 2% of all discounts. Store discounts were out of scope
+   (no comparison group).
+
+Lesson: a positive result is not a finding until it survives a placebo test.
+
+## Stage 5. Q3 Baskets
+
+1. Split the rise in spend per basket by commodity. The top items were Christmas goods, turkey,
+   baking, soup and cold remedies.
+2. Checked seasonality: these items peak exactly 52 weeks apart (turkey weeks 35 and 87,
+   Christmas weeks 40 and 92). The late "growth" was the holiday season.
+3. This changed the business trigger, the EDA baseline (moved from weeks 34 to 84 to regular
+   weeks 50 to 84) and closed H2, H3 and H8.
+4. Market basket analysis: high-lift pairs were niche, frequent pairs were loosely linked staples.
+   Picked cross-sell candidates in between (lift 4 or more, support 1% or more).
+5. Learned that confidence shows overlap, not order or cause, and that a missing item may be
+   at home or bought elsewhere.
+
+Lesson: check what is inside a trend before naming it growth.
+
+## Stage 6. Dashboard
+
+1. Built summary tables in SQL so Power BI loads small tables instead of heavy views.
+2. Chose the SQL Server connector by mistake at first. Switched to PostgreSQL.
+3. Table names loaded as `public dash_...`, so DAX needed quotes.
+4. Overview cards used weeks 34 to 84 while the chart labelled those weeks as holiday season.
+   Fixed the baseline to regular weeks 50 to 84 and split weeks 17 to 32 into their own label.
+5. Cards showed merchandise-only figures (uplift 7.5%) while early notes used all sales (5.7%).
+   Aligned the README with the dashboard on merchandise only.
+6. Line charts with a period legend drew lines across gaps. Switched to column charts.
+7. Small weekly differences were invisible on a 0-based axis, so the driver charts show
+   "% vs a regular week" on the same scale.
+8. Fixed a refresh error (cyclic reference) by reloading one table, a sort error (circular
+   dependency) by building the sort column in Power Query, and a redemption chart that showed
+   percent of grand total instead of the actual rate.

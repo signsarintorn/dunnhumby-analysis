@@ -1,0 +1,66 @@
+# Methods
+
+## Scope and cleaning
+
+1. Merchandise only. Non-merchandise products are flagged in `product_clean` by department
+   (fuel, misc transactions, coupons, postage, donations), by commodity (coupon and misc items,
+   no description) or by sub-commodity containing "gasoline".
+2. `transactions_clean` keeps rows with sales and quantity above zero. It is used for revenue,
+   RFM and campaign analysis.
+3. `transactions_basket` also keeps 3,748 zero-sales rows that carry a store discount (promotional
+   items sold at no charge). It is used for basket analysis.
+4. Weeks 17 to 101 are used for week-to-week comparisons. Customer-level analysis uses weeks
+   17 to 102. Week number equals (day + 8) / 7 (integer division) for every row.
+5. Regular weeks 50 to 84 form the baseline. Weeks 17 to 32 are still settling, and weeks 33 to 49
+   and 85 to 101 are holiday seasons.
+
+## Q1 RFM segmentation
+
+1. Recency: days between a household's last merchandise trip and the last day of the data (711).
+   Frequency: number of baskets with at least one merchandise item. Monetary: total merchandise spend.
+2. Each measure is scored 1 to 5 using cut-offs at the 20th, 40th, 60th and 80th percentiles,
+   so households with the same value always get the same score. Recency is reversed so 5 is best.
+3. Frequency and Monetary scores are averaged into FM, since 91% of households score within one
+   point on both (correlation 0.80).
+4. Segments: Champions (R 4 to 5, FM 4 to 5), Loyal (R 3, FM 4 to 5), Potential (R 3 to 5,
+   FM 2 to 3), Light (R 3 to 5, FM 1), At risk (R 1 to 2, FM 3 to 5), Lapsed (the rest).
+5. Usual gap: time between first and last trip divided by trips minus one. A median version uses
+   the middle value of all gaps between trip days and is less affected by one long absence.
+6. Rhythm status compares days since the last trip with the usual gap: On schedule (up to 1 gap),
+   Slightly late (up to 2), Late (up to 3), Overdue (more than 3). Households with one trip are Unknown.
+
+## Q2 Campaign lift
+
+1. Sales drivers: weekly sales are split into households, trips per household and spend per basket.
+   Taking logs turns the product into a sum, and each part's share of the variation in log sales
+   is its covariance with log sales divided by the variance of log sales. Shares add to 100%.
+2. Lift (difference-in-differences): for each household, weekly spend during the campaign minus
+   weekly spend in a baseline period. Households are grouped into deciles by baseline spend.
+   Lift is the average change of targeted households minus the average change of non-targeted
+   households in the same decile, weighted by targeted households.
+3. Two baselines were used for campaign 18 (weeks 85 to 92): weeks 17 to 32 (before any campaign,
+   but a year old) and weeks 77 to 84 (recent, but overlapping other campaigns).
+4. Pull-forward check: the same comparison for the 8 weeks after the campaign (weeks 93 to 100),
+   with and without households that received later campaigns.
+5. Placebo test: the same method applied to two periods with no campaigns (weeks 17 to 24 vs
+   25 to 32). The result should be zero if targeted and comparison households would otherwise
+   change in the same way.
+
+## Q3 Basket analysis
+
+1. Spend per basket drivers: for each commodity, sales divided by the number of baskets in each
+   period (weeks 68 to 84 and 85 to 101). The change per commodity, divided by the total change,
+   gives its share of the rise.
+2. Product pairs at commodity level. Support: share of all baskets containing both. Confidence:
+   share of baskets with one item that also contain the other. Lift: observed baskets with both
+   divided by the number expected if the items were unrelated.
+3. Only pairs found together in at least 500 baskets (100 in the holiday period) are kept.
+4. Pair types: Cross-sell candidate (lift 4 or more and support 1% or more), Strong but niche
+   (lift 4 or more, support under 1%), Loosely linked (lift 2 to 4).
+
+## Dashboard
+
+1. Summary tables in `sql/06_dashboard_tables.sql` are loaded into Power BI in Import mode.
+2. Baseline measures remove all filters and use regular weeks 50 to 84, so every bar is compared
+   with the same reference.
+3. "Vs a regular week" charts show each week's value divided by the regular-week average, minus one.
